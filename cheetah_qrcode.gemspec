@@ -1,4 +1,6 @@
-require File.expand_path("../lib/cheetah_qrcode.rb", __FILE__)
+# frozen_string_literal: true
+
+require File.expand_path('lib/cheetah_qrcode.rb', __dir__)
 
 Gem::Specification.new do |s|
   s.name          = 'cheetah_qrcode'
@@ -10,6 +12,6 @@ Gem::Specification.new do |s|
   s.files       = Dir['{lib,ext}/**/*.{rb,h,c}']
   s.extensions  = ['ext/cheetah_qrcode/extconf.rb']
 
-  s.add_development_dependency 'rake-compiler'
   s.add_development_dependency 'rake'
+  s.add_development_dependency 'rake-compiler'
 end
