@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 
-require File.expand_path('lib/cheetah_qrcode.rb', __dir__)
+require_relative 'lib/cheetah_qrcode/version'
 
 Gem::Specification.new do |s|
   s.name          = 'cheetah_qrcode'
+  s.summary       = 'super fast qrcode generator'
   s.version       = CheetahQRCode::VERSION
   s.authors       = ['atitan']
   s.email         = ['commit@atifans.net']
