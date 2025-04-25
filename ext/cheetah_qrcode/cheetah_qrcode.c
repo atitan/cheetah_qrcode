@@ -2,7 +2,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <math.h>
 #include "qrcodegen.h"
 #include "spng.h"
 
@@ -98,12 +97,12 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
                 for (size_t x = 0; x < image_size; x++) {
                         size_t i = (y * image_size) + x;
 
-                        int qrcode_x = (int)floor(x * image_scale) - qrcode_border;
-                        int qrcode_y = (int)floor(y * image_scale) - qrcode_border;
+                        int qrcode_x = (int)(x * image_scale) - qrcode_border;
+                        int qrcode_y = (int)(y * image_scale) - qrcode_border;
 
-                        if (qrcodegen_getModule(qrcode, qrcode_x, qrcode_y)) {
-                                image[i] = 0; // Black
-                        } else {
+                        // Image was initialized with 0 (Black)
+                        // Set white pixels only
+                        if (!qrcodegen_getModule(qrcode, qrcode_x, qrcode_y)) {
                                 image[i] = 255; // White
                         }
                 }
