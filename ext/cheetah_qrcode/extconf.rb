@@ -6,8 +6,6 @@ REQUIRED_HEADER = %w[
   ruby.h
 ]
 
-#string.h
-
 REQUIRED_HEADER.each do |header|
   abort "missing header: #{header}" unless have_header(header)
 end

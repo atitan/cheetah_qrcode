@@ -1,8 +1,8 @@
 #include <ruby.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <math.h>
 #include "qrcodegen.h"
 #include "spng.h"
 
@@ -11,10 +11,12 @@ static VALUE encode(int argc, VALUE* argv, VALUE self);
 static VALUE encode(int argc, VALUE* argv, VALUE self) {
         VALUE text, errCorLvl, png_string = Qnil;
         bool ok;
-        int qrcode_size, qrcode_border, image_width, image_height, image_length, ret;
+        int qrcode_modules, qrcode_border, qrcode_size;
+        int image_size, image_length, ret;
+        float image_scale;
         size_t png_size;
         uint8_t qrcode[qrcodegen_BUFFER_LEN_MAX];
-        uint8_t tempBuffer[qrcodegen_BUFFER_LEN_MAX];
+        uint8_t qrcode_buffer[qrcodegen_BUFFER_LEN_MAX];
         uint8_t *image = NULL;
         spng_ctx *ctx = NULL;
         void *png_buffer = NULL;
@@ -41,7 +43,7 @@ static VALUE encode(int argc, VALUE* argv, VALUE self) {
 
         ok = qrcodegen_encodeText(
                 RSTRING_PTR(text),
-                tempBuffer,
+                qrcode_buffer,
                 qrcode,
                 NUM2UINT(errCorLvl),
                 qrcodegen_VERSION_MIN,
@@ -54,22 +56,26 @@ static VALUE encode(int argc, VALUE* argv, VALUE self) {
                 rb_raise(rb_eRuntimeError, "Unable to create QR Code");
         }
 
-        qrcode_size = qrcodegen_getSize(qrcode);
+        qrcode_modules = qrcodegen_getSize(qrcode);
         qrcode_border = 4;
-        image_width = qrcode_size + (qrcode_border * 2);
-        image_height = qrcode_size + (qrcode_border * 2);
-        image_length = image_width * image_height;
+        qrcode_size = qrcode_modules + (qrcode_border * 2);
+        image_size = 580;
+        image_length = image_size * image_size;
+        image_scale = (float)qrcode_size / image_size;
 
-        image = malloc(image_length);
+        image = calloc(image_length, sizeof(uint8_t));
         if (image == NULL) {
                 rb_raise(rb_eRuntimeError, "Unable to create image buffer");
         }
 
-        for (int y = 0; y < image_height; y++) {
-                for (int x = 0; x < image_width; x++) {
-                        int i = (y * image_width) + x;
+        for (int y = 0; y < image_size; y++) {
+                for (int x = 0; x < image_size; x++) {
+                        int i = (y * image_size) + x;
 
-                        if (qrcodegen_getModule(qrcode, x - qrcode_border, y - qrcode_border)) {
+                        int qrcode_x = (int)round(x * image_scale) - qrcode_border;
+                        int qrcode_y = (int)round(y * image_scale) - qrcode_border;
+
+                        if (qrcodegen_getModule(qrcode, qrcode_x, qrcode_y)) {
                                 image[i] = 0; // Black
                         } else {
                                 image[i] = 255; // White
@@ -84,8 +90,8 @@ static VALUE encode(int argc, VALUE* argv, VALUE self) {
         spng_set_option(ctx, SPNG_ENCODE_TO_BUFFER, 1);
 
         struct spng_ihdr ihdr = {0};
-        ihdr.width = image_width;
-        ihdr.height = image_height;
+        ihdr.width = image_size;
+        ihdr.height = image_size;
         ihdr.color_type = SPNG_COLOR_TYPE_GRAYSCALE;
         ihdr.bit_depth = 8;
 
