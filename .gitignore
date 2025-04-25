@@ -38,6 +38,7 @@ build/
 .rvmrc
 
 *.o
+*.bundle
 mkmf.log
 Makefile
 *.png
