@@ -13,6 +13,8 @@ Gem::Specification.new do |s|
   s.files       = Dir['{lib,ext}/**/*.{rb,h,c}']
   s.extensions  = ['ext/cheetah_qrcode/extconf.rb']
 
+  s.required_ruby_version = '>= 2.6'
+
   s.add_development_dependency 'rake'
   s.add_development_dependency 'rake-compiler'
 end
