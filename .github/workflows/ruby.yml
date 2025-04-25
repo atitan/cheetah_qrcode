@@ -20,7 +20,9 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby-version }}
-          bundler-cache: true
+
+      - name: Set up rake-compiler
+        run: gem install rake-compiler
 
       - name: Build extension
         run: rake compile
