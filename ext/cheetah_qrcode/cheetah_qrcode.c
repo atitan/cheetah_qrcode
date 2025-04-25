@@ -86,6 +86,7 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
         image_length = image_size * image_size;
         image_scale = (float)qrcode_size / image_size;
 
+        // Create image initialized to 0 (Black)
         image = calloc(image_length, sizeof(uint8_t));
         if (!image) {
                 rb_raise(rb_eRuntimeError, "Unable to create image buffer");
@@ -100,8 +101,7 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
                         int qrcode_x = (int)(x * image_scale) - qrcode_border;
                         int qrcode_y = (int)(y * image_scale) - qrcode_border;
 
-                        // Image was initialized with 0 (Black)
-                        // Set white pixels only
+                        // Image is entirely black, set white pixels only
                         if (!qrcodegen_getModule(qrcode, qrcode_x, qrcode_y)) {
                                 image[i] = 255; // White
                         }
