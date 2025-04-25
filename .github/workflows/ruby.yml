@@ -21,6 +21,9 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby-version }}
 
+      - name: Set up rake-compiler
+        run: gem install rake-compiler
+
       - name: Build extension
         run: rake compile
 
