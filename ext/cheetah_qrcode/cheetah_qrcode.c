@@ -6,46 +6,62 @@
 #include "qrcodegen.h"
 #include "spng.h"
 
-static VALUE encode(int argc, VALUE* argv, VALUE self);
+static VALUE encode_text(int argc, VALUE* argv, VALUE self);
 
-static VALUE encode(int argc, VALUE* argv, VALUE self) {
-        VALUE text, errCorLvl, png_string = Qnil;
+static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
+        VALUE arg_text, arg_ec_level, arg_border, arg_size, png_string = Qnil;
         bool ok;
-        int qrcode_modules, qrcode_border, qrcode_size;
-        int image_size, image_length, ret;
+        int error_code;
+        size_t qrcode_ec_level, qrcode_modules, qrcode_border, qrcode_size;
+        size_t image_size, image_length, png_size;
         float image_scale;
-        size_t png_size;
         uint8_t qrcode[qrcodegen_BUFFER_LEN_MAX];
         uint8_t qrcode_buffer[qrcodegen_BUFFER_LEN_MAX];
         uint8_t *image = NULL;
         spng_ctx *ctx = NULL;
         void *png_buffer = NULL;
 
-        rb_scan_args(argc, argv, "20", &text, &errCorLvl);
+        rb_scan_args(argc, argv, "40", &arg_text, &arg_ec_level, &arg_border, &arg_size);
 
-        if (TYPE(text) != T_STRING) {
+        if (TYPE(arg_text) != T_STRING) {
                 rb_raise(rb_eTypeError, "Invalid text");
         }
 
-        if (TYPE(errCorLvl) != T_FIXNUM) {
+        if (TYPE(arg_ec_level) == T_SYMBOL) {
+                arg_ec_level = SYM2ID(arg_ec_level);
+        } else {
                 rb_raise(rb_eTypeError, "Invalid error correction level");
         }
 
-        switch (NUM2UINT(errCorLvl)) {
-        case qrcodegen_Ecc_LOW:
-        case qrcodegen_Ecc_MEDIUM:
-        case qrcodegen_Ecc_QUARTILE:
-        case qrcodegen_Ecc_HIGH:
-                break;
-        default:
+        if (arg_ec_level == rb_intern("L") || arg_ec_level == rb_intern("l")) {
+                qrcode_ec_level = qrcodegen_Ecc_LOW;
+        } else if (arg_ec_level == rb_intern("M") || arg_ec_level == rb_intern("m")) {
+                qrcode_ec_level = qrcodegen_Ecc_MEDIUM;
+        } else if (arg_ec_level == rb_intern("Q") || arg_ec_level == rb_intern("q")) {
+                qrcode_ec_level = qrcodegen_Ecc_QUARTILE;
+        } else if (arg_ec_level == rb_intern("H") || arg_ec_level == rb_intern("h")) {
+                qrcode_ec_level = qrcodegen_Ecc_HIGH;
+        } else {
                 rb_raise(rb_eTypeError, "Invalid error correction level");
+        }
+
+        if (TYPE(arg_border) == T_FIXNUM) {
+                qrcode_border = NUM2UINT(arg_border);
+        } else {
+                rb_raise(rb_eTypeError, "Invalid border");
+        }
+
+        if (TYPE(arg_size) == T_FIXNUM) {
+                image_size = NUM2UINT(arg_size);
+        } else {
+                rb_raise(rb_eTypeError, "Invalid size");
         }
 
         ok = qrcodegen_encodeText(
-                RSTRING_PTR(text),
+                RSTRING_PTR(arg_text),
                 qrcode_buffer,
                 qrcode,
-                NUM2UINT(errCorLvl),
+                qrcode_ec_level,
                 qrcodegen_VERSION_MIN,
                 qrcodegen_VERSION_MAX,
                 qrcodegen_Mask_AUTO,
@@ -53,24 +69,32 @@ static VALUE encode(int argc, VALUE* argv, VALUE self) {
         );
 
         if (!ok) {
-                rb_raise(rb_eRuntimeError, "Unable to create QR Code");
+                rb_raise(rb_eRuntimeError, "Unable to create QR Code, maybe it's too large");
         }
 
+        // Dimension of original qrcode
         qrcode_modules = qrcodegen_getSize(qrcode);
-        qrcode_border = 4;
         qrcode_size = qrcode_modules + (qrcode_border * 2);
-        image_size = 600;
+
+        // Do not resize if no size is supplied
+        if (image_size == 0) {
+                image_size = qrcode_size;
+        }
+
+        // Dimension of image to output
         image_length = image_size * image_size;
         image_scale = (float)qrcode_size / image_size;
 
         image = calloc(image_length, sizeof(uint8_t));
-        if (image == NULL) {
+        if (!image) {
                 rb_raise(rb_eRuntimeError, "Unable to create image buffer");
         }
 
-        for (int y = 0; y < image_size; y++) {
-                for (int x = 0; x < image_size; x++) {
-                        int i = (y * image_size) + x;
+        // Map every dot back to original qrcode using image_scale
+        // to resize and fill pixels into image buffer at the same time
+        for (size_t y = 0; y < image_size; y++) {
+                for (size_t x = 0; x < image_size; x++) {
+                        size_t i = (y * image_size) + x;
 
                         int qrcode_x = (int)floor(x * image_scale) - qrcode_border;
                         int qrcode_y = (int)floor(y * image_scale) - qrcode_border;
@@ -83,35 +107,39 @@ static VALUE encode(int argc, VALUE* argv, VALUE self) {
                 }
         }
 
-        /* Creating an encoder context requires a flag */
+        // Proceed to create PNG after image resize
         ctx = spng_ctx_new(SPNG_CTX_ENCODER);
 
-        /* Encode to internal buffer managed by the library */
+        // Use internal buffer provided by spng
         spng_set_option(ctx, SPNG_ENCODE_TO_BUFFER, 1);
 
+        // Set PNG IHDR
         struct spng_ihdr ihdr = {0};
         ihdr.width = image_size;
         ihdr.height = image_size;
         ihdr.color_type = SPNG_COLOR_TYPE_GRAYSCALE;
         ihdr.bit_depth = 8;
-
         spng_set_ihdr(ctx, &ihdr);
 
-        /* SPNG_ENCODE_FINALIZE will finalize the PNG with the end-of-file marker */
-        ret = spng_encode_image(ctx, image, image_length, SPNG_FMT_PNG, SPNG_ENCODE_FINALIZE);
-        if (ret) {
-                goto encode_error;
+        // SPNG_ENCODE_FINALIZE will finalize the PNG with the end-of-file marker
+        error_code = spng_encode_image(ctx, image, image_length, SPNG_FMT_PNG, SPNG_ENCODE_FINALIZE);
+        if (!error_code) {
+                // Retrieve png from spng internal buffer
+                png_buffer = spng_get_png_buffer(ctx, &png_size, &error_code);
+                if (png_buffer) {
+                        png_string = rb_str_new(png_buffer, png_size);
+                }
         }
 
-        png_buffer = spng_get_png_buffer(ctx, &png_size, &ret);
-        if (png_buffer != NULL) {
-                png_string = rb_str_new(png_buffer, png_size);
-        }
-
-encode_error:
+        // After calling spng_get_png_buffer(), png_buffer is then owned by us
+        // We have to free it manually
         spng_ctx_free(ctx);
         free(image);
         free(png_buffer);
+
+        if (png_string == Qnil) {
+                rb_raise(rb_eRuntimeError, "Unable to encode image");
+        }
 
         return png_string;
 }
@@ -119,10 +147,5 @@ encode_error:
 void Init_cheetah_qrcode(void) {
         VALUE cCheetahQRCode = rb_const_get(rb_cObject, rb_intern("CheetahQRCode"));
 
-        rb_define_const(cCheetahQRCode, "ECC_L", UINT2NUM(qrcodegen_Ecc_LOW));
-        rb_define_const(cCheetahQRCode, "ECC_M", UINT2NUM(qrcodegen_Ecc_MEDIUM));
-        rb_define_const(cCheetahQRCode, "ECC_Q", UINT2NUM(qrcodegen_Ecc_QUARTILE));
-        rb_define_const(cCheetahQRCode, "ECC_H", UINT2NUM(qrcodegen_Ecc_HIGH));
-
-        rb_define_singleton_method(cCheetahQRCode, "encode", encode, -1);
+        rb_define_singleton_method(cCheetahQRCode, "encode_text", encode_text, -1);
 }
