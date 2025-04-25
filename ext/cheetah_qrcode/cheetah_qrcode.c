@@ -10,8 +10,6 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self);
 
 static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
         VALUE arg_text, arg_ec_level, arg_border, arg_size, png_string = Qnil;
-        bool ok;
-        int error_code;
         size_t qrcode_ec_level, qrcode_modules, qrcode_border, qrcode_size;
         size_t image_size, image_length, png_size;
         float image_scale;
@@ -23,14 +21,14 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
 
         rb_scan_args(argc, argv, "40", &arg_text, &arg_ec_level, &arg_border, &arg_size);
 
-        if (TYPE(arg_text) != T_STRING) {
+        if (rb_type(arg_text) != T_STRING) {
                 rb_raise(rb_eTypeError, "Invalid text");
         }
 
-        if (TYPE(arg_ec_level) == T_SYMBOL) {
-                arg_ec_level = SYM2ID(arg_ec_level);
+        if (rb_type(arg_ec_level) == T_SYMBOL) {
+                arg_ec_level = RB_SYM2ID(arg_ec_level);
         } else {
-                rb_raise(rb_eTypeError, "Invalid error correction level");
+                rb_raise(rb_eTypeError, "Invalid error correction level, use :L, :M, :Q, :H");
         }
 
         if (arg_ec_level == rb_intern("L") || arg_ec_level == rb_intern("l")) {
@@ -42,22 +40,22 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
         } else if (arg_ec_level == rb_intern("H") || arg_ec_level == rb_intern("h")) {
                 qrcode_ec_level = qrcodegen_Ecc_HIGH;
         } else {
-                rb_raise(rb_eTypeError, "Invalid error correction level");
+                rb_raise(rb_eTypeError, "Invalid error correction level, use :L, :M, :Q, :H");
         }
 
-        if (TYPE(arg_border) == T_FIXNUM) {
-                qrcode_border = NUM2UINT(arg_border);
+        if (rb_type(arg_border) == T_FIXNUM) {
+                qrcode_border = RB_NUM2UINT(arg_border);
         } else {
                 rb_raise(rb_eTypeError, "Invalid border");
         }
 
-        if (TYPE(arg_size) == T_FIXNUM) {
-                image_size = NUM2UINT(arg_size);
+        if (rb_type(arg_size) == T_FIXNUM) {
+                image_size = RB_NUM2UINT(arg_size);
         } else {
                 rb_raise(rb_eTypeError, "Invalid size");
         }
 
-        ok = qrcodegen_encodeText(
+        bool ok = qrcodegen_encodeText(
                 RSTRING_PTR(arg_text),
                 qrcode_buffer,
                 qrcode,
@@ -67,7 +65,6 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
                 qrcodegen_Mask_AUTO,
                 true
         );
-
         if (!ok) {
                 rb_raise(rb_eRuntimeError, "Unable to create QR Code, maybe it's too large");
         }
@@ -81,7 +78,12 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
                 image_size = qrcode_size;
         }
 
-        // Dimension of image to output
+        // Prevent down scale
+        if (image_size < qrcode_size) {
+                rb_raise(rb_eArgError, "Downscale QR Code will result in data loss");
+        }
+
+        // Dimension of output image
         image_length = image_size * image_size;
         image_scale = (float)qrcode_size / image_size;
 
@@ -122,7 +124,7 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
         spng_set_ihdr(ctx, &ihdr);
 
         // SPNG_ENCODE_FINALIZE will finalize the PNG with the end-of-file marker
-        error_code = spng_encode_image(ctx, image, image_length, SPNG_FMT_PNG, SPNG_ENCODE_FINALIZE);
+        int error_code = spng_encode_image(ctx, image, image_length, SPNG_FMT_PNG, SPNG_ENCODE_FINALIZE);
         if (!error_code) {
                 // Retrieve png from spng internal buffer
                 png_buffer = spng_get_png_buffer(ctx, &png_size, &error_code);
