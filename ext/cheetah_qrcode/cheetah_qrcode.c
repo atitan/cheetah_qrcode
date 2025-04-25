@@ -59,7 +59,7 @@ static VALUE encode(int argc, VALUE* argv, VALUE self) {
         qrcode_modules = qrcodegen_getSize(qrcode);
         qrcode_border = 4;
         qrcode_size = qrcode_modules + (qrcode_border * 2);
-        image_size = 580;
+        image_size = 600;
         image_length = image_size * image_size;
         image_scale = (float)qrcode_size / image_size;
 
@@ -72,8 +72,8 @@ static VALUE encode(int argc, VALUE* argv, VALUE self) {
                 for (int x = 0; x < image_size; x++) {
                         int i = (y * image_size) + x;
 
-                        int qrcode_x = (int)round(x * image_scale) - qrcode_border;
-                        int qrcode_y = (int)round(y * image_scale) - qrcode_border;
+                        int qrcode_x = (int)floor(x * image_scale) - qrcode_border;
+                        int qrcode_y = (int)floor(y * image_scale) - qrcode_border;
 
                         if (qrcodegen_getModule(qrcode, qrcode_x, qrcode_y)) {
                                 image[i] = 0; // Black
