@@ -155,8 +155,8 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
         free(image);
         free(png_buffer);
 
-        if (png_string == Qnil) {
-                rb_raise(rb_eRuntimeError, "Unable to encode image");
+        if (error_code) {
+                rb_raise(rb_eRuntimeError, "Unable to encode image: %s", spng_strerror(error_code));
         }
 
         return png_string;
