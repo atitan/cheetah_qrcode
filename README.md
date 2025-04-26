@@ -1,6 +1,14 @@
+[![Gem Version](https://badge.fury.io/rb/cheetah_qrcode.svg)](https://badge.fury.io/rb/cheetah_qrcode)
+
 # Cheetah QR Code
 
 Fast QR Code png generator for Ruby
+
+## Install
+
+```shell
+gem install cheetah_qrcode
+```
 
 ## Usage
 
