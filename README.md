@@ -30,4 +30,4 @@ This project includes files from the following repos:
 - [libspng](https://github.com/randy408/libspng) by randy408
 - [qrcodegen](https://github.com/nayuki/QR-Code-generator) by nayuki
 
-License notice for their work is included either in file header or by license file besides included files.
+License notices for their work are included either in file headers or by license file besides included files.
