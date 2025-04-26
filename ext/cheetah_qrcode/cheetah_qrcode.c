@@ -10,7 +10,7 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self);
 static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
         VALUE arg_text, arg_ec_level, arg_border, arg_size, png_string = Qnil;
         size_t qrcode_ec_level, qrcode_modules, qrcode_border, qrcode_size;
-        size_t image_size, image_length, png_size;
+        size_t image_size, image_scanline_width, image_length, png_size;
         float image_scale;
         uint8_t qrcode[qrcodegen_BUFFER_LEN_MAX];
         uint8_t qrcode_buffer[qrcodegen_BUFFER_LEN_MAX];
@@ -77,13 +77,20 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
                 image_size = qrcode_size;
         }
 
-        // Prevent down scale
+        // Prevent downscale
         if (image_size < qrcode_size) {
                 rb_raise(rb_eArgError, "Downscale QR Code will result in data loss");
         }
 
         // Dimension of output image
-        image_length = image_size * image_size;
+        // Image is consist of scanline_width * lines(height)
+        // For 100x100 image, lines(height) is always 100
+        // @8bit: scanline_width = 8 bit * 100 = 800 bits = 100 bytes
+        //        buffer size needed = 100 bytes * 100 lines = 10000 bytes
+        // @1bit: scanline_width = 1 bit * 100 = 100 bits = 13 bytes(round up)
+        //        buffer size needed = 13 bytes * 100 lines = 1300 bytes
+        image_scanline_width = (image_size + 7) / 8;
+        image_length = image_scanline_width * image_size;
         image_scale = (float)image_size / qrcode_size;
 
         // Create image initialized to 0 (Entirely black image)
@@ -117,9 +124,9 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
                         // Fill white pixels into image
                         for (size_t iy = iy_begin; iy < iy_end; iy++) {
                                 for (size_t ix = ix_begin; ix < ix_end; ix++) {
-                                        size_t i = (iy * image_size) + ix;
+                                        size_t i = (iy * image_scanline_width) + (ix / 8);
 
-                                        image[i] = 255; // White
+                                        image[i] |= 0b10000000 >> (ix % 8);
                                 }
                         }
                 }
@@ -136,7 +143,7 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
         ihdr.width = image_size;
         ihdr.height = image_size;
         ihdr.color_type = SPNG_COLOR_TYPE_GRAYSCALE;
-        ihdr.bit_depth = 8;
+        ihdr.bit_depth = 1;
         spng_set_ihdr(ctx, &ihdr);
 
         // SPNG_ENCODE_FINALIZE will finalize the PNG with the end-of-file marker
