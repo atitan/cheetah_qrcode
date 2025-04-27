@@ -113,6 +113,14 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
                         size_t iy_begin = (size_t)(qy * image_scale) + 1;
                         size_t iy_end = (size_t)((qy + 1) * image_scale) + 1;
 
+                        // Fix offset for the first pixel
+                        if (qx == 0) {
+                                ix_begin = 0;
+                        }
+                        if (qy == 0) {
+                                iy_begin = 0;
+                        }
+
                         // For boundary safety
                         if (ix_end > image_size) {
                                 ix_end = image_size;
