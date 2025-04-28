@@ -24,11 +24,19 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
                 rb_raise(rb_eTypeError, "Invalid text");
         }
 
-        if (rb_type(arg_ec_level) == T_SYMBOL) {
-                arg_ec_level = RB_SYM2ID(arg_ec_level);
-        } else {
+        if (rb_type(arg_ec_level) != T_SYMBOL) {
                 rb_raise(rb_eTypeError, "Invalid error correction level, use :L, :M, :Q, :H");
         }
+
+        if (rb_type(arg_border) != T_FIXNUM) {
+                rb_raise(rb_eTypeError, "Invalid border");
+        }
+
+        if (rb_type(arg_size) != T_FIXNUM) {
+                rb_raise(rb_eTypeError, "Invalid size");
+        }
+
+        arg_ec_level = RB_SYM2ID(arg_ec_level);
 
         if (arg_ec_level == rb_intern("L") || arg_ec_level == rb_intern("l")) {
                 qrcode_ec_level = qrcodegen_Ecc_LOW;
@@ -42,16 +50,18 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
                 rb_raise(rb_eTypeError, "Invalid error correction level, use :L, :M, :Q, :H");
         }
 
-        if (rb_type(arg_border) == T_FIXNUM) {
-                qrcode_border = RB_NUM2UINT(arg_border);
-        } else {
-                rb_raise(rb_eTypeError, "Invalid border");
+        qrcode_border = RB_NUM2UINT(arg_border);
+
+        // The max version qrcode is only 117 wide
+        if (qrcode_border > 128) {
+                rb_raise(rb_eTypeError, "Border too large");
         }
 
-        if (rb_type(arg_size) == T_FIXNUM) {
-                image_size = RB_NUM2UINT(arg_size);
-        } else {
-                rb_raise(rb_eTypeError, "Invalid size");
+        image_size = RB_NUM2UINT(arg_size);
+
+        // 204800x204800 will use 5000MiB memory for image buffer
+        if (image_size > 204800) {
+                rb_raise(rb_eTypeError, "Image size too large");
         }
 
         bool ok = qrcodegen_encodeText(
@@ -96,7 +106,7 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
         // Create image initialized to 0 (Entirely black image)
         image = calloc(image_length, sizeof(uint8_t));
         if (!image) {
-                rb_raise(rb_eRuntimeError, "Unable to create image buffer");
+                rb_raise(rb_eRuntimeError, "Unable to create image buffer for %lu bytes", image_length);
         }
 
         // Lookup map for qrcode-to-image pixel conversion
