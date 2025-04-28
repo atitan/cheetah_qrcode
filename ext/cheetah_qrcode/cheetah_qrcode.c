@@ -99,6 +99,20 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
                 rb_raise(rb_eRuntimeError, "Unable to create image buffer");
         }
 
+        // Lookup map for qrcode-to-image pixel conversion
+        size_t image_scale_map[qrcode_size + 1];
+
+        // First pixel always start at 0
+        image_scale_map[0] = 0;
+
+        // Last pixel always end at image_size
+        image_scale_map[qrcode_size] = image_size;
+
+        // Precompute image scale pixels
+        for (size_t i = 1; i < qrcode_size; i++) {
+                image_scale_map[i] = (size_t)(i * image_scale) + 1;
+        }
+
         // Loop through qrcode to find white modules to write into image
         for (size_t qy = 0; qy < qrcode_size; qy++) {
                 for (size_t qx = 0; qx < qrcode_size; qx++) {
@@ -108,26 +122,10 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
                         }
 
                         // Map current qrcode module to image coordinates
-                        size_t ix_begin = (size_t)(qx * image_scale) + 1;
-                        size_t ix_end = (size_t)((qx + 1) * image_scale) + 1;
-                        size_t iy_begin = (size_t)(qy * image_scale) + 1;
-                        size_t iy_end = (size_t)((qy + 1) * image_scale) + 1;
-
-                        // Fix offset for the first pixel
-                        if (qx == 0) {
-                                ix_begin = 0;
-                        }
-                        if (qy == 0) {
-                                iy_begin = 0;
-                        }
-
-                        // For boundary safety
-                        if (ix_end > image_size) {
-                                ix_end = image_size;
-                        }
-                        if (iy_end > image_size) {
-                                iy_end = image_size;
-                        }
+                        size_t ix_begin = image_scale_map[qx];
+                        size_t ix_end = image_scale_map[qx + 1];
+                        size_t iy_begin = image_scale_map[qy];
+                        size_t iy_end = image_scale_map[qy + 1];
 
                         // Fill white pixels into image at unit of bytes
                         for (size_t iy = iy_begin; iy < iy_end; iy++) {
