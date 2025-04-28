@@ -129,12 +129,27 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
                                 iy_end = image_size;
                         }
 
-                        // Fill white pixels into image
+                        // Fill white pixels into image at unit of bytes
                         for (size_t iy = iy_begin; iy < iy_end; iy++) {
-                                for (size_t ix = ix_begin; ix < ix_end; ix++) {
+                                size_t ix = ix_begin;
+                                size_t ix_diff = ix_end - ix_begin;
+
+                                while (ix_diff > 0) {
                                         size_t i = (iy * image_scanline_width) + (ix / 8);
 
-                                        image[i] |= 0b10000000 >> (ix % 8);
+                                        uint8_t byte_value = 0xFF;
+                                        uint8_t bits_needed = 8 - (ix % 8);
+
+                                        if (bits_needed > ix_diff) {
+                                                byte_value <<= (bits_needed - ix_diff);
+                                                bits_needed = ix_diff;
+                                        }
+
+                                        byte_value >>= (ix % 8);
+                                        image[i] |= byte_value;
+
+                                        ix += bits_needed;
+                                        ix_diff -= bits_needed;
                                 }
                         }
                 }
