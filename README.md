@@ -59,11 +59,11 @@ end
 ```
 RQRCode: 2.2.0, RQRCodeCore: 1.2.0, ChunkyPNG: 1.4.0
        user     system      total        real
-  43.523532   0.041370  43.564902 ( 43.567882)
+  44.722842   0.020043  44.742885 ( 44.743070)
 
-CheetahQRCode: 1.0.0
+CheetahQRCode: 1.0.2
        user     system      total        real
-   0.485618   0.000000   0.485618 (  0.485627)
+   0.460294   0.000000   0.460294 (  0.460295)
 ```
 
 ## Credits
