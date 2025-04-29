@@ -120,7 +120,7 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
 
         // Precompute image scale pixels
         for (size_t i = 1; i < qrcode_size; i++) {
-                image_scale_map[i] = (size_t)(i * image_scale) + 1;
+                image_scale_map[i] = (size_t)(i * image_scale);
         }
 
         // Loop through qrcode to find white modules to write into image
@@ -140,24 +140,24 @@ static VALUE encode_text(int argc, VALUE* argv, VALUE self) {
                         // Fill white pixels into image at unit of bytes
                         for (size_t iy = iy_begin; iy < iy_end; iy++) {
                                 size_t ix = ix_begin;
-                                size_t ix_diff = ix_end - ix_begin;
+                                size_t bits_remaining = ix_end - ix_begin;
 
-                                while (ix_diff > 0) {
+                                while (bits_remaining > 0) {
                                         size_t i = (iy * image_scanline_width) + (ix / 8);
 
                                         uint8_t byte_value = 0xFF;
                                         uint8_t bits_needed = 8 - (ix % 8);
 
-                                        if (bits_needed > ix_diff) {
-                                                byte_value <<= (bits_needed - ix_diff);
-                                                bits_needed = ix_diff;
+                                        if (bits_needed > bits_remaining) {
+                                                bits_needed = bits_remaining;
+                                                byte_value <<= (8 - bits_needed);
                                         }
 
                                         byte_value >>= (ix % 8);
                                         image[i] |= byte_value;
 
                                         ix += bits_needed;
-                                        ix_diff -= bits_needed;
+                                        bits_remaining -= bits_needed;
                                 }
                         }
                 }
