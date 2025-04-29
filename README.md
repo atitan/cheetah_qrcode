@@ -61,9 +61,9 @@ RQRCode: 2.2.0, RQRCodeCore: 1.2.0, ChunkyPNG: 1.4.0
        user     system      total        real
   44.220344   0.030486  44.250830 ( 44.250962)
 
-CheetahQRCode: 1.0.3
+CheetahQRCode: 1.0.4
        user     system      total        real
-   0.457966   0.000000   0.457966 (  0.457969)
+   0.437743   0.000000   0.437743 (  0.437775)
 ```
 
 ## Credits
