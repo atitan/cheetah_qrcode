@@ -28,4 +28,4 @@ jobs:
         run: rake compile
 
       - name: Test run
-        run: ruby -Ilib:tmp -r cheetah_qrcode -e "CheetahQRCode.encode('test')"
+        run: ruby -Ilib -r cheetah_qrcode -e "CheetahQRCode.encode('test')"
