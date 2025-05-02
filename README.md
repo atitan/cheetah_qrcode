@@ -24,6 +24,12 @@ require 'cheetah_qrcode'
 # * +:size+ - Output image size, cannot be smaller than QR Code modules size, default is QR Code modules size
 CheetahQRCode.encode('test', ec_level: :q, border: 0, size: 600)
 ```
+
+## Caveat
+
+If the specified size is slightly larger than the QR Code modules size, there will be some sort of image distortion due to limitation of 1 bit png.
+Use larger size or QR Code modules size to prevent this issue.
+
 ## Benchmark
 
 ### script
