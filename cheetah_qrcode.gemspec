@@ -12,10 +12,10 @@ Gem::Specification.new do |s|
   s.licenses      = ['MIT']
   s.require_path  = 'lib'
 
-  s.files       = Dir['{lib,ext}/**/*.{rb,h,c}']
+  s.files       = Dir['{lib,ext}/**/*.{rb,h,c,LICENSE}', 'LICENSE', 'README.md']
   s.extensions  = ['ext/cheetah_qrcode/extconf.rb']
 
-  s.required_ruby_version = '>= 2.6'
+  s.required_ruby_version = '>= 2.6.0'
 
   s.add_development_dependency 'rake'
   s.add_development_dependency 'rake-compiler'
